@@ -62,6 +62,7 @@ jobs:
 
       - name: Update index.yaml on gh-pages (cr index only)
         run: |
+          mkdir -p .cr-index
           ./bin/cr index \
             --owner "${{ github.repository_owner }}" \
             --git-repo "${{ github.event.repository.name }}" \
