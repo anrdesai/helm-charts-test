@@ -11,17 +11,16 @@ on:
         required: true
 
 permissions:
-  contents: write # create releases, upload assets, push gh-pages
+  contents: write # create releases, upload assets, push the PR branch
+  pull-requests: write # cr --pr opens the index PR against the default branch
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # cr reads/writes the index via a worktree of origin/gh-pages.
-      - name: Fetch gh-pages ref
-        run: git fetch origin gh-pages:refs/remotes/origin/gh-pages
+        with:
+          fetch-depth: 0 # cr needs full history + origin/main to worktree and branch off
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -60,7 +59,7 @@ jobs:
           gh release create "$V" --title "$V" --notes "release-metadata $V" || echo "release exists"
           gh release upload "$V" ".cr-release-packages/release-metadata-$V.tgz" --clobber
 
-      - name: Update index.yaml on gh-pages (cr index only)
+      - name: Open PR to update index.yaml on the default branch (cr index --pr)
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
@@ -71,6 +70,6 @@ jobs:
             --token "${{ github.token }}" \
             --package-path .cr-release-packages \
             --release-name-template "{{ .Version }}" \
-            --pages-branch gh-pages --pages-index-path index.yaml \
+            --pages-branch main --pages-index-path index.yaml \
             --index-path .cr-index/index.yaml \
-            --push
+            --pr
