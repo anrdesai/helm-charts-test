@@ -1,0 +1,20 @@
+# Release metadata template. Placeholders are filled by
+# build-release-metadata-chart.ps1 at release time; validated by values.schema.json.
+apiVersion: metadata.cleanroom.azure.com/v1
+kind: ReleaseMetadata
+metadata:
+  release: __RELEASE_VERSION__
+  published: __PUBLISHED__
+# Logical image name -> full container reference (digest-pinned or tag-based).
+images:
+  ccf-run-js-app-virtual: __IMAGE_CCF_RUN_JS_APP_VIRTUAL__
+  ccf-run-js-app-snp: __IMAGE_CCF_RUN_JS_APP_SNP__
+  ccf-recovery-agent: __IMAGE_CCF_RECOVERY_AGENT__
+  ccf-recovery-service: __IMAGE_CCF_RECOVERY_SERVICE__
+  ccf-consortium-manager: __IMAGE_CCF_CONSORTIUM_MANAGER__
+  cvm-attestation-verifier: __IMAGE_CVM_ATTESTATION_VERIFIER__
+  ccr-proxy: __IMAGE_CCR_PROXY__
+  skr: __IMAGE_SKR__
+  ccf-network-security-policy: __IMAGE_CCF_NETWORK_SECURITY_POLICY__
+  ccf-recovery-service-security-policy: __IMAGE_CCF_RECOVERY_SERVICE_SECURITY_POLICY__
+  ccf-consortium-manager-security-policy: __IMAGE_CCF_CONSORTIUM_MANAGER_SECURITY_POLICY__
