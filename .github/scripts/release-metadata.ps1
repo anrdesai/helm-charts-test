@@ -53,8 +53,10 @@ git fetch origin "${pagesBranch}:refs/remotes/origin/$pagesBranch"
     -releasedGroups $releaseType `
     -outDir $packagePath
 
-# Attach the chart .tgz to the (already-created) Release for this tag. Skip if it
-# already exists so a re-run never overwrites a published, digest-referenced asset.
+# Attach the chart .tgz to the (already-created) Release for this tag. Skip upload if
+# it already exists (never overwrite a published, digest-referenced asset). Then use
+# the PUBLISHED asset's exact bytes for indexing + attestation, so a re-run (which
+# rebuilds a non-byte-identical .tgz) stays consistent with what consumers download.
 $asset = "release-metadata-$tag.tgz"
 $existing = gh release view $tag --json assets --jq '.assets[].name'
 if (@($existing) -contains $asset) {
@@ -63,6 +65,7 @@ if (@($existing) -contains $asset) {
 else {
     gh release upload $tag "$packagePath/$asset"
 }
+gh release download $tag --repo $env:GITHUB_REPOSITORY --pattern $asset --dir $packagePath --clobber
 
 # Keep at most one outstanding index PR: skip if one is already open. (An
 # already-merged version is a no-op inside cr, which adds only missing versions.)
