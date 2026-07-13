@@ -87,5 +87,5 @@ git config --global user.email "41898282+github-actions[bot]@users.noreply.githu
     --release-name-template "{{ .Version }}" `
     --pages-branch $pagesBranch `
     --pages-index-path index.yaml `
-    --index-path "$env:RUNNER_TEMP/cr-index.yaml" `
+    --index-path "$env:RUNNER_TEMP/index.yaml" `
     --pr
