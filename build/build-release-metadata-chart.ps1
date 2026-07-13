@@ -181,6 +181,12 @@ if ($remaining) {
 }
 $content.TrimEnd() | Out-File $valuesPath
 
+# Validate the generated contract against values.schema.json before publishing.
+# helm enforces the schema on 'lint' (not on 'package'/'show values'); this is the
+# producer-side guardrail for the non-deployable metadata chart.
+Write-Host "Linting release-metadata chart against values.schema.json"
+helm lint $chartDir
+
 Write-Host "Packaging release-metadata chart version $tag"
 helm package $chartDir --destination $outDir --version $tag
 
