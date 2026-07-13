@@ -1,17 +1,15 @@
 param(
     [parameter(Mandatory = $true)]
-    [string]$version,
-
-    [parameter(Mandatory = $true)]
     [string]$tag,
 
     [parameter(Mandatory = $true)]
     [string]$repo,
 
-    # Registry/repo to resolve image digests against (e.g. the ACR just pushed
-    # to). Defaults to $repo. Lets us resolve from an ACR but bake public MCR
-    # references into values.yaml, matching the attest-artefact convention.
-    [string]$digestRepo = "",
+    # Registry/repo to bake into the published references (e.g. the public
+    # mcr.microsoft.com/azurecleanroom). Digests are resolved from -repo (the ACR
+    # just pushed to) but the published reference is rebased onto this, matching the
+    # attest-artefact convention. Defaults to -repo (single-registry local runs).
+    [string]$publishRepo = "",
 
     # Comma-separated release-type tokens released this cycle (e.g.
     # "ccf-network-containers,cleanroom-containers"). Images whose group was
@@ -19,22 +17,22 @@ param(
     # previous published catalog. Empty => full release (resolve everything).
     [string]$releasedGroups = "",
 
-    # index.yaml used to source carry-forward references for images not released
-    # this cycle. Defaults to the Pages catalog we republish to. Override for
-    # local/test runs.
+    # GitHub Pages index.yaml used to source carry-forward references for images not
+    # released this cycle. Defaults to the published catalog; override for local/test.
     [string]$previousIndexUrl = "https://azure.github.io/azure-cleanroom/index.yaml",
 
     # Base URL under which the packaged .tgz is served, written into index.yaml.
-    [parameter(Mandatory = $true)]
-    [string]$chartBaseUrl,
+    # Optional: when empty, the local 'helm repo index' step is skipped (used when
+    # an external tool such as chart-releaser 'cr' owns index generation).
+    [string]$chartBaseUrl = "",
 
     [string]$outDir = ""
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
-if ($digestRepo -eq "") {
-    $digestRepo = $repo
+if ($publishRepo -eq "") {
+    $publishRepo = $repo
 }
 
 $root = git rev-parse --show-toplevel
@@ -139,11 +137,11 @@ foreach ($e in $catalog) {
     $released = [bool]($e.groups | Where-Object { $releasedSet -contains $_ })
     if ($released) {
         if ($e.kind -eq "container") {
-            $digest = Get-Digest -repo $digestRepo -containerName $e.path -tag $tag
-            $images[$e.name] = "$repo/$($e.path)@$digest"
+            $digest = Get-Digest -repo $repo -containerName $e.path -tag $tag
+            $images[$e.name] = "$publishRepo/$($e.path)@$digest"
         }
         else {
-            $images[$e.name] = "$repo/$($e.path):$tag"
+            $images[$e.name] = "$publishRepo/$($e.path):$tag"
         }
     }
     else {
@@ -155,7 +153,7 @@ foreach ($e in $catalog) {
     }
 }
 
-# Assemble a fresh chart directory and stamp the version.
+# Assemble a fresh chart directory and stamp the version (== the release tag).
 $chartSrc = "$buildRoot/release-metadata-chart"
 $chartDir = "$outDir/release-metadata"
 if (Test-Path $chartDir) {
@@ -164,13 +162,13 @@ if (Test-Path $chartDir) {
 Copy-Item -Recurse $chartSrc $chartDir
 
 $chart = Get-Content -Path "$chartDir/Chart.yaml" -Raw | ConvertFrom-Yaml
-$chart.version = $version
+$chart.version = $tag
 ($chart | ConvertTo-Yaml).TrimEnd() | Out-File "$chartDir/Chart.yaml"
 
 # Fill the values.yaml template placeholders with the resolved values.
 $valuesPath = "$chartDir/values.yaml"
 $content = Get-Content -Path $valuesPath -Raw
-$content = $content.Replace("__RELEASE_VERSION__", $version)
+$content = $content.Replace("__RELEASE_VERSION__", $tag)
 $content = $content.Replace("__PUBLISHED__", (Get-Date -Format "yyyy-MM-dd"))
 foreach ($img in $images.GetEnumerator()) {
     $token = "__IMAGE_" + ($img.Name.ToUpperInvariant() -replace '-', '_') + "__"
@@ -183,10 +181,16 @@ if ($remaining) {
 }
 $content.TrimEnd() | Out-File $valuesPath
 
-Write-Host "Packaging release-metadata chart version $version"
-helm package $chartDir --destination $outDir --version $version
+Write-Host "Packaging release-metadata chart version $tag"
+helm package $chartDir --destination $outDir --version $tag
 
-# Merge the new package into index.yaml.
+# Local index generation is optional: in CI, chart-releaser ('cr index') owns the
+# published index.yaml. Only build a local index when a base URL is supplied.
+if ([string]::IsNullOrWhiteSpace($chartBaseUrl)) {
+    Write-Host "chartBaseUrl not set; skipping local 'helm repo index' (cr owns it)."
+    return
+}
+
 $indexFile = "$outDir/index.yaml"
 if (Test-Path $indexFile) {
     helm repo index $outDir --url $chartBaseUrl --merge $indexFile
