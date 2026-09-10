@@ -2,6 +2,17 @@ apiVersion: v1
 entries:
   release-metadata:
   - apiVersion: v2
+    created: "2026-07-13T11:09:48.993915029Z"
+    description: Versioned cleanroom release metadata, read via 'helm show values'.
+      Not deployable; a library chart so 'helm install'/'helm template' are refused
+      by Helm.
+    digest: 8f76f3eaa69dbc0e500170c6c37342d131bb3c84892cbb56eba104824dbcada9
+    name: release-metadata
+    type: library
+    urls:
+    - https://github.com/anrdesai/helm-charts-test/releases/download/8.0.0/release-metadata-8.0.0.tgz
+    version: 8.0.0
+  - apiVersion: v2
     created: "2026-07-12T15:14:56.839982965Z"
     description: Versioned cleanroom release metadata, read via 'helm show values'.
       Not deployable; a library chart so 'helm install'/'helm template' are refused
@@ -34,4 +45,4 @@ entries:
     urls:
     - https://github.com/anrdesai/helm-charts-test/releases/download/1.0.0/release-metadata-1.0.0.tgz
     version: 1.0.0
-generated: "2026-07-12T15:14:56.839999165Z"
+generated: "2026-07-13T11:09:48.993932775Z"
